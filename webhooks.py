@@ -54,9 +54,12 @@ def index():
 
     # Allow Github IPs only
     if config.get('github_ips_only', True):
-        src_ip = ip_address(
-            u'{}'.format(request.remote_addr)  # Fix stupid ipaddress issue
-        )
+        if request.headers.getlist("X-Forwarded-For"):
+            src_ip = request.headers.getlist("X-Forwarded-For")[0]
+        else:
+            src_ip = request.remote_addr
+
+        src_ip = ip_address(str(src_ip).decode('ascii'))
         whitelist = requests.get('https://api.github.com/meta').json()['hooks']
 
         for valid_ip in whitelist:
@@ -157,7 +160,6 @@ def index():
     # Run scripts
     ran = {}
     for s in scripts:
-
         proc = Popen(
             [s, tmpfile, event],
             stdout=PIPE, stderr=PIPE
